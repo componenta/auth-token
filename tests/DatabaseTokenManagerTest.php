@@ -40,6 +40,39 @@ final class DatabaseTokenManagerTest extends TestCase
         );
     }
 
+    public function testBoundTokenCannotBeUsedWithAnotherBinding(): void
+    {
+        self::requireSqlite();
+        $manager = new DatabaseTokenManager(
+            SqliteDatabaseFixture::create(),
+            new FrozenClock('2030-01-01T00:00:00+00:00', 'UTC'),
+        );
+        $purpose = new TokenPurpose('magic_link');
+        $credential = $manager->issue(
+            Uuid::fromString(
+                '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+            ),
+            $purpose,
+            binding: 'binding-a',
+        );
+
+        self::assertNull($manager->find(
+            $credential,
+            $purpose,
+            'binding-b',
+        ));
+        self::assertNull($manager->consume(
+            $credential,
+            $purpose,
+            'binding-b',
+        ));
+        self::assertNotNull($manager->consume(
+            $credential,
+            $purpose,
+            'binding-a',
+        ));
+    }
+
     public function testConsumeIsSingleUse(): void
     {
         self::requireSqlite();

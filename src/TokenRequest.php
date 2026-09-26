@@ -13,6 +13,7 @@ final readonly class TokenRequest
         public string $identity,
         public TokenPurpose $purpose,
         public array $context = [],
+        public ?string $binding = null,
     ) {
         if (
             $this->identity === ''
@@ -22,6 +23,19 @@ final readonly class TokenRequest
         ) {
             throw new \InvalidArgumentException(
                 'One-time token request identity is invalid.',
+            );
+        }
+
+        if (
+            $this->binding !== null
+            && (
+                $this->binding === ''
+                || strlen($this->binding) > 256
+                || preg_match('/[\x00-\x1F\x7F]/', $this->binding) === 1
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                'One-time token request binding is invalid.',
             );
         }
 

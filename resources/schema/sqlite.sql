@@ -1,6 +1,7 @@
 CREATE TABLE auth_one_time_tokens (
     subject_uuid TEXT NOT NULL,
     purpose TEXT NOT NULL,
+    binding TEXT NULL,
     credential_hash TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,

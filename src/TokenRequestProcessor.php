@@ -32,6 +32,7 @@ final readonly class TokenRequestProcessor
             $identity->uuid,
             $this->purpose,
             $this->ttlSeconds,
+            $request->binding,
         );
 
         $this->sender->send(

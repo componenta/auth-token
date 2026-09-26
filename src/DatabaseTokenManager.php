@@ -35,6 +35,7 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
         UuidInterface $subjectId,
         TokenPurpose $purpose,
         int $ttlSeconds = 300,
+        ?string $binding = null,
     ): TokenCredential {
         if ($ttlSeconds < 1 || $ttlSeconds > self::MAX_TTL) {
             throw new \InvalidArgumentException(
@@ -42,13 +43,19 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
             );
         }
 
+        self::assertBinding($binding);
         $credential = TokenCredential::generate();
         $now = $this->now();
 
         $this->database->insert($this->table)->values([
             'subject_uuid' => $subjectId->toString(),
             'purpose' => $purpose->value,
-            'credential_hash' => $this->hash($credential, $purpose),
+            'binding' => $binding,
+            'credential_hash' => $this->hash(
+                $credential,
+                $purpose,
+                $binding,
+            ),
             'created_at' => $this->format($now),
             'expires_at' => $this->format(
                 $now->modify(sprintf('+%d seconds', $ttlSeconds)),
@@ -56,6 +63,7 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
             'used_at' => null,
         ])->onConflict(
             OnConflict::target('subject_uuid', 'purpose')->doUpdate([
+                'binding',
                 'credential_hash',
                 'created_at',
                 'expires_at',
@@ -71,12 +79,18 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
         #[\SensitiveParameter]
         TokenCredential $credential,
         TokenPurpose $purpose,
+        ?string $binding = null,
     ): ?TokenRecord {
+        self::assertBinding($binding);
         $now = $this->format($this->now());
         $row = $this->database->select()
             ->from($this->table)
             ->where('purpose', $purpose->value)
-            ->where('credential_hash', $this->hash($credential, $purpose))
+            ->where('binding', $binding)
+            ->where(
+                'credential_hash',
+                $this->hash($credential, $purpose, $binding),
+            )
             ->where('used_at', null)
             ->where('expires_at', '>', $now)
             ->run()
@@ -90,17 +104,22 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
         #[\SensitiveParameter]
         TokenCredential $credential,
         TokenPurpose $purpose,
+        ?string $binding = null,
     ): ?TokenRecord {
+        self::assertBinding($binding);
+
         return $this->database->transaction(function () use (
             $credential,
             $purpose,
+            $binding,
         ): ?TokenRecord {
-            $hash = $this->hash($credential, $purpose);
+            $hash = $this->hash($credential, $purpose, $binding);
             $now = $this->now();
             $formattedNow = $this->format($now);
             $row = $this->database->select()
                 ->from($this->table)
                 ->where('purpose', $purpose->value)
+                ->where('binding', $binding)
                 ->where('credential_hash', $hash)
                 ->where('used_at', null)
                 ->where('expires_at', '>', $formattedNow)
@@ -114,6 +133,7 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
             $affected = $this->database->update($this->table)
                 ->where('subject_uuid', self::stringValue($row, 'subject_uuid'))
                 ->where('purpose', $purpose->value)
+                ->where('binding', $binding)
                 ->where('credential_hash', $hash)
                 ->where('used_at', null)
                 ->where('expires_at', '>', $formattedNow)
@@ -174,14 +194,33 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
         #[\SensitiveParameter]
         TokenCredential $credential,
         TokenPurpose $purpose,
+        ?string $binding,
     ): string {
         return hash(
             'sha256',
             "componenta-auth-token-v1\0"
                 . $purpose->value
                 . "\0"
+                . ($binding === null ? '-' : 'b:' . $binding)
+                . "\0"
                 . $credential->toString(),
         );
+    }
+
+    private static function assertBinding(?string $binding): void
+    {
+        if (
+            $binding !== null
+            && (
+                $binding === ''
+                || strlen($binding) > 256
+                || preg_match('/[\x00-\x1F\x7F]/', $binding) === 1
+            )
+        ) {
+            throw new \InvalidArgumentException(
+                'One-time token binding is invalid.',
+            );
+        }
     }
 
     /** @param array<array-key, mixed> $row */
@@ -195,6 +234,7 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
             $this->date(self::stringValue($row, 'created_at')),
             $this->date(self::stringValue($row, 'expires_at')),
             $used === null ? null : $this->date(self::stringValue($row, 'used_at')),
+            binding: self::nullableStringValue($row, 'binding'),
         );
     }
 
@@ -228,6 +268,16 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
         throw new \UnexpectedValueException(
             'Persisted one-time token timestamp is invalid.',
         );
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function nullableStringValue(
+        array $row,
+        string $key,
+    ): ?string {
+        return ($row[$key] ?? null) === null
+            ? null
+            : self::stringValue($row, $key);
     }
 
     /** @param array<array-key, mixed> $row */

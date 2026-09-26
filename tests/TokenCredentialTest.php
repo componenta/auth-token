@@ -22,5 +22,10 @@ final class TokenCredentialTest extends TestCase
             $credential->toString(),
             json_encode($credential->__debugInfo(), JSON_THROW_ON_ERROR),
         );
+        self::assertStringNotContainsString(
+            $credential->toString(),
+            json_encode($credential, JSON_THROW_ON_ERROR),
+        );
+        self::assertNotInstanceOf(\Stringable::class, $credential);
     }
 }

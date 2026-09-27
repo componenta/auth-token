@@ -15,6 +15,7 @@ interface TokenManagerInterface
         ?string $binding = null,
     ): TokenCredential;
 
+    /** Reads a matching, unused, unexpired token without consuming it. */
     public function find(
         #[\SensitiveParameter]
         TokenCredential $credential,
@@ -22,6 +23,10 @@ interface TokenManagerInterface
         ?string $binding = null,
     ): ?TokenRecord;
 
+    /**
+     * Atomically claims a matching, unused, unexpired token. At most one caller
+     * succeeds; a replay or competing claim returns null.
+     */
     public function consume(
         #[\SensitiveParameter]
         TokenCredential $credential,

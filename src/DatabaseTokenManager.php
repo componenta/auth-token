@@ -83,7 +83,10 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
     ): ?TokenRecord {
         self::assertBinding($binding);
         $now = $this->format($this->now());
-        $row = $this->database->select()
+        $row = $this->database->select()->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
             ->from($this->table)
             ->where('purpose', $purpose->value)
             ->where('binding', $binding)
@@ -116,7 +119,10 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
             $hash = $this->hash($credential, $purpose, $binding);
             $now = $this->now();
             $formattedNow = $this->format($now);
-            $row = $this->database->select()
+            $row = $this->database->select()->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
                 ->from($this->table)
                 ->where('purpose', $purpose->value)
                 ->where('binding', $binding)
@@ -160,7 +166,10 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
         }
 
         $now = $this->format($this->now());
-        $rows = $this->database->select('credential_hash')
+        $rows = $this->database->select('credential_hash')->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            )
             ->from($this->table)
             ->where(static function (mixed $query) use ($now): void {
                 if (!$query instanceof \Cycle\Database\Query\SelectQuery) {
@@ -287,7 +296,7 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
 
         if (!is_string($value) && !is_int($value)) {
             throw new \UnexpectedValueException(sprintf(
-                'Database column "%s" is invalid.',
+                'Database column "%s" must be a string-compatible value.',
                 $key,
             ));
         }

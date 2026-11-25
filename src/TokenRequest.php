@@ -6,13 +6,16 @@ namespace Componenta\Auth\Token;
 
 final readonly class TokenRequest
 {
+    /** @var array<string, string> */
+    public array $context;
+
     /**
      * @param array<string, string> $context
      */
     public function __construct(
         public string $identity,
         public TokenPurpose $purpose,
-        public array $context = [],
+        array $context = [],
         public ?string $binding = null,
     ) {
         if (
@@ -39,7 +42,9 @@ final readonly class TokenRequest
             );
         }
 
-        foreach ($this->context as $key => $value) {
+        $snapshot = [];
+
+        foreach ($context as $key => $value) {
             if (
                 $key === ''
                 || strlen($key) > 128
@@ -51,6 +56,12 @@ final readonly class TokenRequest
                     'One-time token request context is invalid.',
                 );
             }
+
+            // Copy each value so caller-owned PHP references cannot change
+            // the validated request while it is queued for delivery.
+            $snapshot[$key] = $value;
         }
+
+        $this->context = $snapshot;
     }
 }

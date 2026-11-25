@@ -6,11 +6,11 @@ namespace Componenta\Auth\Token;
 
 final readonly class TokenRequest
 {
-    /** @var array<string, string> */
+    /** @var array<array-key, string> */
     public array $context;
 
     /**
-     * @param array<string, string> $context
+     * @param array<array-key, string> $context
      */
     public function __construct(
         public string $identity,
@@ -45,10 +45,12 @@ final readonly class TokenRequest
         $snapshot = [];
 
         foreach ($context as $key => $value) {
+            $name = (string) $key;
+
             if (
-                $key === ''
-                || strlen($key) > 128
-                || preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]*\z/D', $key) !== 1
+                $name === ''
+                || strlen($name) > 128
+                || preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]*\z/D', $name) !== 1
                 || strlen($value) > 4096
                 || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
             ) {

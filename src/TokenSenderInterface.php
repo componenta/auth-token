@@ -7,7 +7,7 @@ namespace Componenta\Auth\Token;
 interface TokenSenderInterface
 {
     /**
-     * @param array<string, string> $context
+     * @param array<array-key, string> $context
      */
     public function send(
         string $destination,

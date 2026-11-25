@@ -20,6 +20,29 @@ use PHPUnit\Framework\TestCase;
 
 final class TokenRequestProcessorTest extends TestCase
 {
+    public function testDeliveryReceivesNumericContextKeysUnchanged(): void
+    {
+        $identity = new readonly class(Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+        )) implements IdentityInterface {
+            public function __construct(public UuidInterface $uuid) {}
+        };
+        $identities = $this->createStub(TokenIdentityProviderInterface::class);
+        $identities->method('findByIdentity')->willReturn($identity);
+        $credential = TokenCredential::fromBytes(str_repeat('a', 32));
+        $tokens = $this->createStub(TokenManagerInterface::class);
+        $tokens->method('issue')->willReturn($credential);
+        $purpose = new TokenPurpose('magic_link');
+        $context = [0 => 'zero', 42 => 'numeric-key'];
+        $sender = $this->createMock(TokenSenderInterface::class);
+        $sender->expects(self::once())
+            ->method('send')
+            ->with('user@example.test', $credential, $purpose, $context);
+
+        (new TokenRequestProcessor($identities, $tokens, $sender, $purpose))
+            ->process(new TokenRequest('user@example.test', $purpose, $context));
+    }
+
     public function testUnknownIdentityDoesNotIssueOrSend(): void
     {
         $identities = $this->createStub(TokenIdentityProviderInterface::class);

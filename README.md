@@ -5,6 +5,11 @@ Purpose-separated, single-use bearer tokens for authentication flows.
 The package is a reusable primitive for magic links, password reset and similar
 one-time flows. It deliberately keeps one active token per subject and purpose.
 
+Consumption preserves the token's recorded timeline when the wall clock moves
+backwards: `usedAt` cannot precede `createdAt`. Creation time is not a not-before
+restriction. Expiry checks still use the current clock and retain the original
+expiry; the token remains single-use.
+
 Security properties:
 
 - credentials contain 32 CSPRNG bytes encoded as unpadded base64url;

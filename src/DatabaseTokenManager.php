@@ -136,6 +136,11 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
                 return null;
             }
 
+            $createdAt = $this->date(self::stringValue($row, 'created_at'));
+            $formattedUsedAt = $now < $createdAt
+                ? $this->format($createdAt)
+                : $formattedNow;
+
             $affected = $this->database->update($this->table)
                 ->where('subject_uuid', self::stringValue($row, 'subject_uuid'))
                 ->where('purpose', $purpose->value)
@@ -143,14 +148,14 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
                 ->where('credential_hash', $hash)
                 ->where('used_at', null)
                 ->where('expires_at', '>', $formattedNow)
-                ->values(['used_at' => $formattedNow])
+                ->values(['used_at' => $formattedUsedAt])
                 ->run();
 
             if ($affected !== 1) {
                 return null;
             }
 
-            $row['used_at'] = $formattedNow;
+            $row['used_at'] = $formattedUsedAt;
 
             return $this->hydrate($row);
         });

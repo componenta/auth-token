@@ -111,7 +111,7 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
     ): ?TokenRecord {
         self::assertBinding($binding);
 
-        return $this->database->transaction(function () use (
+        $record = $this->database->transaction(function () use (
             $credential,
             $purpose,
             $binding,
@@ -159,6 +159,12 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
 
             return $this->hydrate($row);
         });
+
+        // Both the conditional write and commit may wait after the timestamp
+        // was bound. Do not authorize an expired proof after the claim completes.
+        return $record !== null && $record->expiresAt > $this->now()
+            ? $record
+            : null;
     }
 
     #[\Override]

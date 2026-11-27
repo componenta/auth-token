@@ -99,7 +99,14 @@ final readonly class DatabaseTokenManager implements TokenManagerInterface
             ->run()
             ->fetch();
 
-        return is_array($row) ? $this->hydrate($row) : null;
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $record = $this->hydrate($row);
+
+        // The read may complete after the timestamp bound into its predicate.
+        return $record->expiresAt > $this->now() ? $record : null;
     }
 
     #[\Override]

@@ -17,6 +17,9 @@ expiry. The consumed token cannot be reused after that rejection.
 clock failure prevents returning the record, the exception propagates and the
 token remains consumed; an exception is not a guarantee of rollback.
 
+A lookup also checks expiry after its database read completes. Lookup does not
+consume the token or change its state.
+
 Security properties:
 
 - credentials contain 32 CSPRNG bytes encoded as unpadded base64url;

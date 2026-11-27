@@ -10,6 +10,13 @@ backwards: `usedAt` cannot precede `createdAt`. Creation time is not a not-befor
 restriction. Expiry checks still use the current clock and retain the original
 expiry; the token remains single-use.
 
+A claim that completes at or after expiry is rejected even when it began before
+expiry. The consumed token cannot be reused after that rejection.
+
+`DatabaseTokenManager` consumption is irreversible once committed. If a later
+clock failure prevents returning the record, the exception propagates and the
+token remains consumed; an exception is not a guarantee of rollback.
+
 Security properties:
 
 - credentials contain 32 CSPRNG bytes encoded as unpadded base64url;

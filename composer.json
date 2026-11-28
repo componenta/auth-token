@@ -4,9 +4,10 @@
     "type": "library",
     "license": "MIT",
     "require": {
-        "php": "^8.4",
         "componenta/identity": "^1.1.1",
+        "componenta/random-token": "^1.0",
         "cycle/database": "^2.22",
+        "php": "^8.4",
         "psr/clock": "^1.0"
     },
     "require-dev": {
